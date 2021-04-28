@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void sendMessage(String message) {
+    public void sendMessage(String message) {
 
         // Check that we're actually connected before trying anything
         if (mBTService.getState() != BluetoothService.STATE_CONNECTED) {
@@ -199,6 +200,27 @@ public class MainActivity extends AppCompatActivity {
                     //mAdapter.notifyDataSetChanged();
                     //messageList.add(new androidRecyclerView.Message(counter++, readMessage, mConnectedDeviceName));
                     mMessageReceived.add(readMessage);
+
+                    switch (readMessage){
+                        case "ATZ\r":
+                            sendMessage("ATZ\n" +
+                                    "ELM327 v2.3\n" +
+                                    ">");
+                            break;
+                        case "ATE0\r":
+                            sendMessage("OK\n" +
+                                    ">");
+                            break;
+                        case "ATSP0\r":
+                            sendMessage("OK\n" +
+                                    ">");
+                            break;
+                        case "ATAL\r":
+                            sendMessage("OK\n" +
+                                    ">");
+                            break;
+                    }
+
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -210,6 +232,22 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
                             Toast.LENGTH_SHORT).show();
                     break;
+            }
+        }
+
+        private void sendMessage(String message) {
+            // Check that we're actually connected before trying anything
+            if (mBTService.getState() != BluetoothService.STATE_CONNECTED) {
+                return;
+            }
+            // Check that there's actually something to send
+            if (message.length() > 0) {
+                // Get the message bytes and tell the BluetoothChatService to write
+                byte[] send = message.getBytes();
+                mBTService.write(send);
+                // Reset out string buffer to zero and clear the edit text field
+                mOutStringBuffer.setLength(0);
+                mOutEditText.setText(mOutStringBuffer);
             }
         }
     };
