@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
 
                     switch (readMessage){
                         case "ATZ\r":
-                            sendMessage("ATZ\n" +
+                            sendMessage("ATZ\n>" +
                                     "ELM327 v2.3\n" +
                                     ">");
                             break;

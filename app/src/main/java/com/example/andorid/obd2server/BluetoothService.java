@@ -5,9 +5,12 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+
+import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +22,8 @@ public class BluetoothService {
     private static final String NAME = "Verifacil";
 
     // Unique UUID for this application
-    private static final UUID MY_UUID = UUID.fromString("b545a148-8f76-11eb-8dcd-0242ac130003");
+    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+//    private static final UUID MY_UUID = UUID.fromString("b545a148-8f76-11eb-8dcd-0242ac130003");
 
     // Member fields
     private final BluetoothAdapter mAdapter;
@@ -41,6 +45,7 @@ public class BluetoothService {
      * @param context The UI Activity Context
      * @param handler A Handler to send messages back to the UI Activity
      */
+    @RequiresApi(api = Build.VERSION_CODES.ECLAIR)
     public BluetoothService(Context context, Handler handler) {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
         mState = STATE_NONE;
@@ -158,16 +163,20 @@ public class BluetoothService {
      * Stop all threads
      */
     public synchronized void stop() {
+        boolean a;
         if (mConnectThread != null) {
             mConnectThread.cancel();
+            a = mConnectThread.isAlive();
             mConnectThread = null;
         }
         if (mConnectedThread != null) {
             mConnectedThread.cancel();
+            a = mConnectedThread.isAlive();
             mConnectedThread = null;
         }
         if (mAcceptThread != null) {
             mAcceptThread.cancel();
+            a = mAcceptThread.isAlive();
             mAcceptThread = null;
         }
         setState(STATE_NONE);
@@ -195,26 +204,30 @@ public class BluetoothService {
      * Indicate that the connection attempt failed and notify the UI Activity.
      */
     private void connectionFailed() {
-        setState(STATE_LISTEN);
+
         // Send a failure message back to the Activity
         Message msg = mHandler.obtainMessage(MainActivity.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
         bundle.putString(MainActivity.TOAST, "Unable to connect device");
         msg.setData(bundle);
         mHandler.sendMessage(msg);
+        stop();
+        start();
     }
 
     /**
      * Indicate that the connection was lost and notify the UI Activity.
      */
     private void connectionLost() {
-        setState(STATE_LISTEN);
+
         // Send a failure message back to the Activity
         Message msg = mHandler.obtainMessage(MainActivity.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
         bundle.putString(MainActivity.TOAST, "Device connection was lost");
         msg.setData(bundle);
         mHandler.sendMessage(msg);
+        stop();
+        start();
     }
 
     /**
@@ -262,6 +275,7 @@ public class BluetoothService {
                                 // Either not ready or already connected. Terminate new socket.
                                 try {
                                     socket.close();
+                                    this.interrupt();
                                 } catch (IOException e) {
                                 }
                                 break;
@@ -274,7 +288,10 @@ public class BluetoothService {
         public void cancel() {
             try {
                 mmServerSocket.close();
+                this.interrupt();
             } catch (IOException e) {
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
             }
         }
     }
@@ -395,6 +412,9 @@ public class BluetoothService {
         public void cancel() {
             try {
                 mmSocket.close();
+                mmInStream.close();
+                mmOutStream.close();
+                this.interrupt();
             } catch (IOException e) {
             }
         }
